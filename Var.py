@@ -73,8 +73,11 @@ def calcular_distancia_cm(pt_def, pt_att, H, ataca_derecha):
     res_att = np.dot(H, vec_att)
     x_att_cm = res_att[0] / res_att[2]
     
-    distancia = x_att_cm - x_def_cm
-    if not ataca_derecha: distancia = -distancia
+    # CORRECCIÓN: Como la línea de portería siempre es el clic 1 y 2, 
+    # el mapa 2D matemático SIEMPRE pone la portería en la coordenada X=0.
+    # Por tanto, si el atacante tiene un valor X menor, está más cerca del fondo (Fuera de juego).
+    distancia = x_def_cm - x_att_cm
+    
     return distancia
 
 def crear_linea_infinita(p1, p2):
