@@ -197,7 +197,7 @@ def actualizar_dibujos():
             
         # Veredicto global
         if atacantes_fuera_juego > 0:
-            texto_veredicto = f"FUERA DE JUEGO ({atacantes_fuera_juego} JUGADOR/ES)"
+            texto_veredicto = "FUERA DE JUEGO"
             color_texto = (0, 0, 255)
         else:
             texto_veredicto = "POSICION CORRECTA"
