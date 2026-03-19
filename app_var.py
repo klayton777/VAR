@@ -29,7 +29,10 @@ def seleccionar_imagen():
     root.withdraw() 
     file_path = filedialog.askopenfilename(
         title="VAR Multijugador - Selecciona la captura del partido",
-        filetypes=[("Imágenes", "*.jpg;*.jpeg;*.png;*.bmp")]
+        filetypes=[
+            ("Imágenes", "*.jpg;*.jpeg;*.png;*.bmp;*.webp"),
+            ("Todos los archivos", "*.*")
+        ]
     )
     root.destroy()
     if not file_path:

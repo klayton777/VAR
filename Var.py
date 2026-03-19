@@ -28,7 +28,10 @@ def seleccionar_imagen():
     root.withdraw() 
     file_path = filedialog.askopenfilename(
         title="VAR 3.0 (Multijugador + CM) - Selecciona la captura",
-        filetypes=[("Imágenes", "*.jpg;*.jpeg;*.png;*.bmp")]
+        filetypes=[
+            ("Imágenes", "*.jpg;*.jpeg;*.png;*.bmp;*.webp"),
+            ("Todos los archivos", "*.*")
+        ]
     )
     root.destroy()
     if not file_path: sys.exit()
