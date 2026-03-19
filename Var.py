@@ -188,7 +188,10 @@ def actualizar_dibujos():
                 cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), (255, 255, 0), 1)
                 
             if p_proyectado == mejor_def_proyectado:
-                imagen_base_dibujada = sombrear_zona_fuera_juego(imagen_base_dibujada, punto_fuga, p_proyectado, ataca_derecha, (255, 255, 0), pts_lim)
+                # Solo dibujamos la sombra cyan si ya hemos pasado a la Fase 3 (Límites)
+                if fase >= 3:
+                    imagen_base_dibujada = sombrear_zona_fuera_juego(imagen_base_dibujada, punto_fuga, p_proyectado, ataca_derecha, (255, 255, 0), pts_lim)
+                # La línea amarilla gruesa sí la dejamos siempre visible para guiarte
                 imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, (255, 255, 0), 2)
             elif mostrar_lineas_fuga:
                 imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, (150, 150, 0), 1)
