@@ -1,6 +1,10 @@
-# Ignorar carpetas de PyInstaller
-dist/
-build/
-*.spec
+# Python
 __pycache__/
-*.ico
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Archivos de diseño/iconos
+icono.ico
+*.log
