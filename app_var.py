@@ -157,9 +157,8 @@ def actualizar_dibujos():
             pie = pts_def[i+1]
             p_proyectado = (hombro[0], pie[1])
             
-            if mostrar_lineas_fuga:
-                cv2.line(imagen_base_dibujada, hombro, p_proyectado, (255, 255, 0), 1, cv2.LINE_AA)
-                cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), (255, 255, 0), 1)
+            cv2.line(imagen_base_dibujada, hombro, p_proyectado, (255, 255, 0), 1, cv2.LINE_AA)
+            cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), (255, 255, 0), 1)
                 
             if p_proyectado == mejor_def_proyectado:
                 # Solo dibujamos la sombra cyan si ya hemos pasado a la Fase 3 (Límites)
@@ -191,9 +190,8 @@ def actualizar_dibujos():
             else:
                 color = (0, 255, 0) # Verde
                 
-            if mostrar_lineas_fuga:
-                cv2.line(imagen_base_dibujada, hombro, p_proyectado, color, 1, cv2.LINE_AA)
-                cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), color, 1)
+            cv2.line(imagen_base_dibujada, hombro, p_proyectado, color, 1, cv2.LINE_AA)
+            cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), color, 1)
                 
             imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, color, 2)
             

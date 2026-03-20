@@ -3,3 +3,5 @@ dist/
 *.spec
 icono.ico
 __pycache__/
+Var.spec
+app_var.spec
