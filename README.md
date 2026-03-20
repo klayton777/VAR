@@ -2,7 +2,7 @@
 
 Aplicación de análisis volumétrico y trazado de líneas de fuera de juego (VAR) de nivel profesional, diseñada con una interfaz gráfica moderna, precisión matemática en perspectiva 3D, y compatibilidad nativa con fotogramas de vídeo para análisis en tiempo real. 
 
-**Hecho por [@albertitocalata7](https://twitter.com/albertitocalata7)**.
+**Hecho por [@albertitocalata](https://twitter.com/albertitocalata)**.
 
 ---
 

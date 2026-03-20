@@ -440,7 +440,7 @@ class VarProInterseccionApp(ctk.CTk):
             if len(self.pts_def) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_def[-1], 2, LALIGA_AZUL, -1)
             if len(self.pts_att) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_att[-1], 2, LALIGA_ROJO, -1)
         
-        texto_marca = "VAR PRO by @albertitocalata7"
+        texto_marca = "VAR PRO by @albertitocalata"
         (text_w, text_h), _ = cv2.getTextSize(texto_marca, cv2.FONT_HERSHEY_DUPLEX, 1.0, 1)
         x_marca = w_img - text_w - 30
         y_marca = text_h + 30
