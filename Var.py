@@ -5,6 +5,15 @@ from tkinter import filedialog
 import sys
 import os
 
+# --- COLORES LALIGA (Formato BGR) ---
+LALIGA_ROJO    = (68, 75, 255)    # Rojo Coral (Offside, Textos)
+LALIGA_AZUL    = (255, 0, 0)      # Azul puro (Línea último defensor)
+LALIGA_SEC     = (255, 100, 50)   # Azul secundario (Sombra, defensores extra)
+LALIGA_VERDE   = (0, 220, 0)      # Verde libre de marca
+LALIGA_BLANCO  = (255, 255, 255)
+LALIGA_NEGRO   = (0, 0, 0)
+LALIGA_MAGENTA = (255, 0, 255)
+
 # --- VARIABLES GLOBALES - MODO MULTIJUGADOR + CM ---
 fase = 0  # 0: Fuga/Area, 1: Defensas, 2: Ataque, 3: Limites
 pts_fuga = []
@@ -93,6 +102,18 @@ def x_en_fondo(p_fuga, p_suelo, y_fondo):
     b = p_fuga[1] - m * p_fuga[0]
     return (y_fondo - b) / m
 
+def obtener_punto_mas_adelantado(hombro, pie, punto_fuga, h_img, ataca_derecha):
+    p_hombro_suelo = (hombro[0], pie[1])
+    p_pie_suelo = (pie[0], pie[1])
+    
+    xf_hombro = x_en_fondo(punto_fuga, p_hombro_suelo, h_img)
+    xf_pie = x_en_fondo(punto_fuga, p_pie_suelo, h_img)
+    
+    if ataca_derecha:
+        return (p_pie_suelo, xf_pie) if xf_pie > xf_hombro else (p_hombro_suelo, xf_hombro)
+    else:
+        return (p_pie_suelo, xf_pie) if xf_pie < xf_hombro else (p_hombro_suelo, xf_hombro)
+
 def dibujar_linea_infinita(img, pt1, pt2, color, grosor):
     p1_inf, p2_inf = crear_linea_infinita(pt1, pt2)
     cv2.line(img, p1_inf, p2_inf, color, grosor, cv2.LINE_AA)
@@ -137,16 +158,16 @@ def actualizar_dibujos():
         0: "Fase 1: Calibrar Area (4 clics en U)",
         1: "Fase 2: Defensores (ESPACIO al terminar)",
         2: "Fase 3: Atacantes (ESPACIO al terminar)",
-        3: "Fase 4: Limites del Campo (Sombra Cyan)"
+        3: "Fase 4: Limites del Campo (Sombra)"
     }
     
     if mostrar_lineas_fuga:
-        cv2.putText(imagen_base_dibujada, f"Ataque: {dir_texto}", (30, 250), cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(imagen_base_dibujada, f"Ataque: {dir_texto}", (30, 250), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(imagen_base_dibujada, f"Ref: {calib_texto}", (30, 290), cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(imagen_base_dibujada, f"Ref: {calib_texto}", (30, 290), cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(imagen_base_dibujada, textos_fase[fase], (30, 330), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(imagen_base_dibujada, textos_fase[fase], (30, 330), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, f"Ataque: {dir_texto}", (30, 250), cv2.FONT_HERSHEY_DUPLEX, 0.8, LALIGA_NEGRO, 3, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, f"Ataque: {dir_texto}", (30, 250), cv2.FONT_HERSHEY_DUPLEX, 0.8, LALIGA_BLANCO, 1, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, f"Ref: {calib_texto}", (30, 290), cv2.FONT_HERSHEY_DUPLEX, 0.8, LALIGA_NEGRO, 3, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, f"Ref: {calib_texto}", (30, 290), cv2.FONT_HERSHEY_DUPLEX, 0.8, LALIGA_BLANCO, 1, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, textos_fase[fase], (30, 330), cv2.FONT_HERSHEY_DUPLEX, 0.7, LALIGA_NEGRO, 3, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, textos_fase[fase], (30, 330), cv2.FONT_HERSHEY_DUPLEX, 0.7, LALIGA_ROJO, 1, cv2.LINE_AA)
 
     # 1. CALIBRACIÓN
     if len(pts_fuga) >= 4:
@@ -154,7 +175,7 @@ def actualizar_dibujos():
 
     if mostrar_lineas_fuga and len(pts_fuga) >= 4:
         for i in range(4):
-            cv2.line(imagen_base_dibujada, pts_fuga[i], pts_fuga[(i+1)%4], (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.line(imagen_base_dibujada, pts_fuga[i], pts_fuga[(i+1)%4], LALIGA_BLANCO, 1, cv2.LINE_AA)
 
     mejor_def_proyectado = None
     mejor_x_fondo = None
@@ -164,8 +185,7 @@ def actualizar_dibujos():
         for i in range(0, len(pts_def) - 1, 2):
             hombro = pts_def[i]
             pie = pts_def[i+1]
-            p_proyectado = (hombro[0], pie[1])
-            xf = x_en_fondo(punto_fuga, p_proyectado, h_img)
+            p_proyectado, xf = obtener_punto_mas_adelantado(hombro, pie, punto_fuga, h_img, ataca_derecha)
             
             if mejor_x_fondo is None:
                 mejor_x_fondo = xf
@@ -181,20 +201,19 @@ def actualizar_dibujos():
         for i in range(0, len(pts_def) - 1, 2):
             hombro = pts_def[i]
             pie = pts_def[i+1]
-            p_proyectado = (hombro[0], pie[1])
+            p_proyectado, _ = obtener_punto_mas_adelantado(hombro, pie, punto_fuga, h_img, ataca_derecha)
             
-            if mostrar_lineas_fuga:
-                cv2.line(imagen_base_dibujada, hombro, p_proyectado, (255, 255, 0), 1, cv2.LINE_AA)
-                cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), (255, 255, 0), 1)
+            cv2.line(imagen_base_dibujada, hombro, p_proyectado, LALIGA_AZUL, 1, cv2.LINE_AA)
+            cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), LALIGA_AZUL, 1)
                 
             if p_proyectado == mejor_def_proyectado:
                 # Solo dibujamos la sombra cyan si ya hemos pasado a la Fase 3 (Límites)
                 if fase >= 3:
-                    imagen_base_dibujada = sombrear_zona_fuera_juego(imagen_base_dibujada, punto_fuga, p_proyectado, ataca_derecha, (255, 255, 0), pts_lim)
+                    imagen_base_dibujada = sombrear_zona_fuera_juego(imagen_base_dibujada, punto_fuga, p_proyectado, ataca_derecha, LALIGA_SEC, pts_lim)
                 # La línea amarilla gruesa sí la dejamos siempre visible para guiarte
-                imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, (255, 255, 0), 2)
+                imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, LALIGA_AZUL, 2)
             elif mostrar_lineas_fuga:
-                imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, (150, 150, 0), 1)
+                imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, LALIGA_SEC, 1)
 
     # 3. EVALUAR ATACANTES Y VEREDICTO (CM)
     atacantes_fuera_juego = 0
@@ -202,51 +221,50 @@ def actualizar_dibujos():
         for i in range(0, len(pts_att) - 1, 2):
             hombro = pts_att[i]
             pie = pts_att[i+1]
-            p_proyectado = (hombro[0], pie[1])
+            p_proyectado, _ = obtener_punto_mas_adelantado(hombro, pie, punto_fuga, h_img, ataca_derecha)
             
             dist_cm = calcular_distancia_cm(mejor_def_proyectado, p_proyectado, matriz_homografia, ataca_derecha)
             
             if dist_cm > 0:
                 atacantes_fuera_juego += 1
-                color = (0, 0, 255) # Rojo
+                color = LALIGA_ROJO # Rojo
             else:
-                color = (0, 255, 0) # Verde
+                color = LALIGA_VERDE # Verde
                 
-            if mostrar_lineas_fuga:
-                cv2.line(imagen_base_dibujada, hombro, p_proyectado, color, 1, cv2.LINE_AA)
-                cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), color, 1)
+            cv2.line(imagen_base_dibujada, hombro, p_proyectado, color, 1, cv2.LINE_AA)
+            cv2.line(imagen_base_dibujada, (pie[0]-5, pie[1]), (pie[0]+5, pie[1]), color, 1)
                 
             imagen_base_dibujada = dibujar_linea_infinita(imagen_base_dibujada, punto_fuga, p_proyectado, color, 2)
             
             # Etiqueta individual sobre la cabeza del jugador
             texto_cm = f"{abs(dist_cm):.1f} cm"
-            cv2.putText(imagen_base_dibujada, texto_cm, (hombro[0] + 10, hombro[1] - 10), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 2, cv2.LINE_AA)
+            cv2.putText(imagen_base_dibujada, texto_cm, (hombro[0] + 10, hombro[1] - 10), cv2.FONT_HERSHEY_DUPLEX, 0.6, LALIGA_NEGRO, 2, cv2.LINE_AA)
             cv2.putText(imagen_base_dibujada, texto_cm, (hombro[0] + 10, hombro[1] - 10), cv2.FONT_HERSHEY_DUPLEX, 0.6, color, 1, cv2.LINE_AA)
             
         # Veredicto global
         if atacantes_fuera_juego > 0:
             texto_veredicto = "FUERA DE JUEGO"
-            color_texto = (0, 0, 255)
+            color_texto = LALIGA_ROJO
         else:
             texto_veredicto = "POSICION CORRECTA"
-            color_texto = (0, 255, 0)
+            color_texto = LALIGA_VERDE
             
-        cv2.putText(imagen_base_dibujada, texto_veredicto, (30, h_img - 30), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0,0,0), 4, cv2.LINE_AA)
+        cv2.putText(imagen_base_dibujada, texto_veredicto, (30, h_img - 30), cv2.FONT_HERSHEY_DUPLEX, 1.2, LALIGA_NEGRO, 4, cv2.LINE_AA)
         cv2.putText(imagen_base_dibujada, texto_veredicto, (30, h_img - 30), cv2.FONT_HERSHEY_DUPLEX, 1.2, color_texto, 2, cv2.LINE_AA)
 
     # 4. LÍMITES Y PUNTOS RESIDUALES
     if mostrar_lineas_fuga:
         for i in range(len(pts_lim)):
-            cv2.circle(imagen_base_dibujada, pts_lim[i], 3, (255, 0, 255), -1) 
+            cv2.circle(imagen_base_dibujada, pts_lim[i], 3, LALIGA_MAGENTA, -1) 
             if i > 0:
-                cv2.line(imagen_base_dibujada, pts_lim[i-1], pts_lim[i], (255, 0, 255), 1, cv2.LINE_AA)
+                cv2.line(imagen_base_dibujada, pts_lim[i-1], pts_lim[i], LALIGA_MAGENTA, 1, cv2.LINE_AA)
         if len(pts_lim) >= 3:
-             cv2.line(imagen_base_dibujada, pts_lim[-1], pts_lim[0], (255, 0, 255), 1, cv2.LINE_AA)
+             cv2.line(imagen_base_dibujada, pts_lim[-1], pts_lim[0], LALIGA_MAGENTA, 1, cv2.LINE_AA)
 
     if mostrar_lineas_fuga:
-        for p in pts_fuga: cv2.circle(imagen_base_dibujada, p, 2, (0, 0, 255), -1)
-        if len(pts_def) % 2 != 0: cv2.circle(imagen_base_dibujada, pts_def[-1], 2, (255, 255, 0), -1)
-        if len(pts_att) % 2 != 0: cv2.circle(imagen_base_dibujada, pts_att[-1], 2, (0, 0, 255), -1)
+        for p in pts_fuga: cv2.circle(imagen_base_dibujada, p, 2, LALIGA_BLANCO, -1)
+        if len(pts_def) % 2 != 0: cv2.circle(imagen_base_dibujada, pts_def[-1], 2, LALIGA_AZUL, -1)
+        if len(pts_att) % 2 != 0: cv2.circle(imagen_base_dibujada, pts_att[-1], 2, LALIGA_ROJO, -1)
 
 def actualizar_interfaz():
     if imagen_base_dibujada is None: return
