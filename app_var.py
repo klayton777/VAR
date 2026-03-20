@@ -249,20 +249,28 @@ def actualizar_interfaz():
     imagen_mostrar = imagen_base_dibujada.copy()
     h, w = imagen_mostrar.shape[:2]
     
-    r = 25 
+    r = 30 
     img_acolchada = cv2.copyMakeBorder(imagen_base_dibujada, r, r, r, r, cv2.BORDER_CONSTANT, value=[0,0,0])
     y_p, x_p = mouse_y + r, mouse_x + r
     recorte = img_acolchada[y_p-r : y_p+r, x_p-r : x_p+r].copy()
     
     if recorte.shape[0] > 0 and recorte.shape[1] > 0:
-        lupa = cv2.resize(recorte, (200, 200), interpolation=cv2.INTER_NEAREST)
-        cv2.line(lupa, (100, 0), (100, 200), (255, 255, 255), 1)
-        cv2.line(lupa, (0, 100), (200, 100), (255, 255, 255), 1)
+        zoom_size = 240
+        lupa = cv2.resize(recorte, (zoom_size, zoom_size), interpolation=cv2.INTER_CUBIC)
         
-        if w > 220 and h > 220:
-            x_ini, y_ini = 10, 10
-            imagen_mostrar[y_ini:y_ini+200, x_ini:x_ini+200] = lupa
-            cv2.rectangle(imagen_mostrar, (x_ini, y_ini), (x_ini+200, y_ini+200), (255, 255, 255), 2)
+        centro = zoom_size // 2
+        cv2.line(lupa, (centro, centro - 20), (centro, centro + 20), LALIGA_BLANCO, 1, cv2.LINE_AA)
+        cv2.line(lupa, (centro - 20, centro), (centro + 20, centro), LALIGA_BLANCO, 1, cv2.LINE_AA)
+        cv2.circle(lupa, (centro, centro), 2, LALIGA_ROJO, -1)
+        
+        if w > zoom_size + 40 and h > zoom_size + 40:
+            x_ini, y_ini = 20, 20
+            if mouse_x < zoom_size + 60 and mouse_y < zoom_size + 60:
+                x_ini = w - zoom_size - 20  
+                
+            imagen_mostrar[y_ini:y_ini+zoom_size, x_ini:x_ini+zoom_size] = lupa
+            cv2.rectangle(imagen_mostrar, (x_ini, y_ini), (x_ini+zoom_size, y_ini+zoom_size), LALIGA_AZUL, 3)
+            cv2.rectangle(imagen_mostrar, (x_ini-1, y_ini-1), (x_ini+zoom_size+1, y_ini+zoom_size+1), LALIGA_NEGRO, 1)
             
     cv2.imshow('VAR Nivel Dios', imagen_mostrar)
 
