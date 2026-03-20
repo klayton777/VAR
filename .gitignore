@@ -1,0 +1,6 @@
+# Ignorar carpetas de PyInstaller
+dist/
+build/
+*.spec
+__pycache__/
+*.ico
