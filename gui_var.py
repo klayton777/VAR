@@ -387,6 +387,7 @@ class VarProApp(ctk.CTk):
                 elif self.mostrar_lineas_fuga:
                     self.imagen_base_dibujada = dibujar_linea_infinita(self.imagen_base_dibujada, self.punto_fuga, p_proyectado, LALIGA_SEC, 1)
 
+        atacantes_fuera_juego = 0
         if self.punto_fuga is not None and mejor_def_proyectado is not None and self.matriz_homografia is not None and len(self.pts_att) >= 2:
             y_eval = self.pts_def[1][1]
             for i in range(0, len(self.pts_att) - 1, 2):
@@ -402,6 +403,50 @@ class VarProApp(ctk.CTk):
                 texto_cm = f"{abs(dist_cm):.1f} cm"
                 cv2.putText(self.imagen_base_dibujada, texto_cm, (hombro[0] + 10, hombro[1] - 10), cv2.FONT_HERSHEY_DUPLEX, 0.6, LALIGA_NEGRO, 2, cv2.LINE_AA)
                 cv2.putText(self.imagen_base_dibujada, texto_cm, (hombro[0] + 10, hombro[1] - 10), cv2.FONT_HERSHEY_DUPLEX, 0.6, color, 1, cv2.LINE_AA)
+                if dist_cm > 0:
+                    atacantes_fuera_juego += 1
+
+            if atacantes_fuera_juego > 0:
+                ruta_img = "offside.png"
+                texto_fallback = "FUERA DE JUEGO"
+                color_fallback = LALIGA_ROJO
+            else:
+                ruta_img = "no_offside.png"
+                texto_fallback = "POSICION CORRECTA"
+                color_fallback = LALIGA_VERDE
+                
+            dibujado_img = False
+            if os.path.exists(ruta_img):
+                overlay = cv2.imread(ruta_img, cv2.IMREAD_UNCHANGED)
+                if overlay is not None:
+                    target_w = int(w_img * 0.25)
+                    if target_w < 300: target_w = 300
+                    if target_w > 900: target_w = 900
+                    
+                    aspect = overlay.shape[1] / overlay.shape[0]
+                    target_h = int(target_w / aspect)
+                    overlay = cv2.resize(overlay, (target_w, target_h), interpolation=cv2.INTER_LANCZOS4)
+                    
+                    x_off = 30
+                    y_off = h_img - target_h - 30
+                    
+                    if y_off >= 0 and x_off + target_w <= w_img:
+                        if len(overlay.shape) == 3 and overlay.shape[2] == 4:
+                            alpha_s = overlay[:, :, 3] / 255.0
+                            alpha_l = 1.0 - alpha_s
+                            for c in range(3):
+                                self.imagen_base_dibujada[y_off:y_off+target_h, x_off:x_off+target_w, c] = (
+                                    alpha_s * overlay[:, :, c] +
+                                    alpha_l * self.imagen_base_dibujada[y_off:y_off+target_h, x_off:x_off+target_w, c]
+                                )
+                        else:
+                            overlay_bgr = overlay[:,:,:3] if len(overlay.shape)==3 and overlay.shape[2]>=3 else overlay
+                            self.imagen_base_dibujada[y_off:y_off+target_h, x_off:x_off+target_w] = overlay_bgr
+                        dibujado_img = True
+            
+            if not dibujado_img:
+                cv2.putText(self.imagen_base_dibujada, texto_fallback, (30, h_img - 30), cv2.FONT_HERSHEY_DUPLEX, 1.2, LALIGA_NEGRO, 4, cv2.LINE_AA)
+                cv2.putText(self.imagen_base_dibujada, texto_fallback, (30, h_img - 30), cv2.FONT_HERSHEY_DUPLEX, 1.2, color_fallback, 2, cv2.LINE_AA)
 
         if self.mostrar_lineas_fuga:
             for i in range(len(self.pts_lim)):
