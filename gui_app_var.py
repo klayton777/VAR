@@ -110,7 +110,7 @@ class VarProInterseccionApp(ctk.CTk):
         # Panel Izquierdo (Controles)
         self.panel_izq = ctk.CTkFrame(self, width=300, corner_radius=0)
         self.panel_izq.grid(row=0, column=0, sticky="nsew")
-        self.panel_izq.grid_rowconfigure(8, weight=1) # Spacer
+        self.panel_izq.grid_rowconfigure(10, weight=1) # Spacer
 
         self.lbl_titulo = ctk.CTkLabel(self.panel_izq, text="VAR PRO (Líneas)", font=ctk.CTkFont(size=24, weight="bold"))
         self.lbl_titulo.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -137,15 +137,33 @@ class VarProInterseccionApp(ctk.CTk):
         self.switch_lineas.select()
         self.switch_lineas.grid(row=6, column=0, padx=20, pady=5, sticky="w")
 
+        # Equipos
+        self.lbl_equipos = ctk.CTkLabel(self.panel_izq, text="Marcador Equipos:", font=ctk.CTkFont(size=12, weight="bold"))
+        self.lbl_equipos.grid(row=7, column=0, padx=20, pady=(15, 0), sticky="w")
+        
+        self.frame_equipos = ctk.CTkFrame(self.panel_izq, fg_color="transparent")
+        self.frame_equipos.grid(row=8, column=0, padx=20, pady=5, sticky="ew")
+        self.frame_equipos.grid_columnconfigure(0, weight=1)
+        self.frame_equipos.grid_columnconfigure(1, weight=1)
+        self.entry_equipo1 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Local", width=110)
+        self.entry_equipo1.grid(row=0, column=0, padx=(0, 5))
+        self.entry_equipo2 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Visit.", width=110)
+        self.entry_equipo2.grid(row=0, column=1, padx=(5, 0))
+        
+        self.entry_equipo1.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo2.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo1.bind("<Return>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo2.bind("<Return>", lambda e: self.actualizar_dibujos())
+
         # Lupa Panel Dedicated
         self.lbl_lupa_title = ctk.CTkLabel(self.panel_izq, text="Lupa de Precisión", font=ctk.CTkFont(size=14, weight="bold"))
-        self.lbl_lupa_title.grid(row=7, column=0, padx=20, pady=(30, 0))
+        self.lbl_lupa_title.grid(row=9, column=0, padx=20, pady=(15, 0))
         
         self.canvas_lupa = ctk.CTkCanvas(self.panel_izq, width=240, height=240, bg="black", highlightthickness=0)
-        self.canvas_lupa.grid(row=8, column=0, padx=20, pady=5, sticky="n")
+        self.canvas_lupa.grid(row=10, column=0, padx=20, pady=5, sticky="n")
 
         self.btn_guardar = ctk.CTkButton(self.panel_izq, text="Exportar Análisis", command=self.guardar_imagen, fg_color="green", hover_color="darkgreen")
-        self.btn_guardar.grid(row=9, column=0, padx=20, pady=20)
+        self.btn_guardar.grid(row=11, column=0, padx=20, pady=20)
 
         # Panel Central (Imagen)
         self.panel_central = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -180,6 +198,18 @@ class VarProInterseccionApp(ctk.CTk):
         self.bind("<space>", lambda e: self.avanzar_fase())
         self.bind("z", lambda e: self.deshacer())
         self.bind("Z", lambda e: self.deshacer())
+        self.bind("<Left>", self.safe_prev_frame)
+        self.bind("<Right>", self.safe_next_frame)
+
+    def safe_prev_frame(self, event):
+        w = self.focus_get()
+        if w and "entry" in str(type(w)).lower(): return
+        self.prev_frame()
+
+    def safe_next_frame(self, event):
+        w = self.focus_get()
+        if w and "entry" in str(type(w)).lower(): return
+        self.next_frame()
 
     def cargar_imagen(self):
         path = filedialog.askopenfilename(filetypes=[("Media", "*.jpg;*.jpeg;*.png;*.bmp;*.webp;*.mp4;*.avi;*.mkv;*.mov")])
@@ -440,13 +470,25 @@ class VarProInterseccionApp(ctk.CTk):
             if len(self.pts_def) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_def[-1], 2, LALIGA_AZUL, -1)
             if len(self.pts_att) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_att[-1], 2, LALIGA_ROJO, -1)
         
-        texto_marca = "VAR PRO by @albertitocalata"
-        (text_w, text_h), _ = cv2.getTextSize(texto_marca, cv2.FONT_HERSHEY_DUPLEX, 1.0, 1)
-        x_marca = w_img - text_w - 30
-        y_marca = text_h + 30
-        cv2.putText(self.imagen_base_dibujada, texto_marca, (x_marca, y_marca), cv2.FONT_HERSHEY_DUPLEX, 1.0, LALIGA_NEGRO, 4, cv2.LINE_AA)
-        cv2.putText(self.imagen_base_dibujada, texto_marca, (x_marca, y_marca), cv2.FONT_HERSHEY_DUPLEX, 1.0, LALIGA_BLANCO, 1, cv2.LINE_AA)
+        eq1 = self.entry_equipo1.get().strip().upper()
+        eq2 = self.entry_equipo2.get().strip().upper()
         
+        if eq1 or eq2:
+            if not eq1: eq1 = "LOCAL"
+            if not eq2: eq2 = "VISIT."
+            texto_marcador = f"{eq1} VS {eq2}"
+            
+            (text_w, text_h), _ = cv2.getTextSize(texto_marcador, cv2.FONT_HERSHEY_DUPLEX, 1.2, 2)
+            margin_x = 20
+            margin_y = 15
+            x_centro = w_img // 2
+            x_inicio = x_centro - (text_w // 2)
+            y_base = text_h + 30
+            
+            cv2.rectangle(self.imagen_base_dibujada, (x_inicio - margin_x, y_base - text_h - margin_y), (x_inicio + text_w + margin_x, y_base + margin_y), LALIGA_NEGRO, -1)
+            cv2.rectangle(self.imagen_base_dibujada, (x_inicio - margin_x, y_base - text_h - margin_y), (x_inicio + text_w + margin_x, y_base + margin_y), LALIGA_BLANCO, 2)
+            cv2.putText(self.imagen_base_dibujada, texto_marcador, (x_inicio, y_base), cv2.FONT_HERSHEY_DUPLEX, 1.2, LALIGA_BLANCO, 2, cv2.LINE_AA)
+            
         self.mostrar_imagen()
 
     def mostrar_imagen(self):
