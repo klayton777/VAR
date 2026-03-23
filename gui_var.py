@@ -127,7 +127,7 @@ class VarProApp(ctk.CTk):
         # Panel Izquierdo (Controles)
         self.panel_izq = ctk.CTkFrame(self, width=300, corner_radius=0)
         self.panel_izq.grid(row=0, column=0, sticky="nsew")
-        self.panel_izq.grid_rowconfigure(9, weight=1) # Spacer
+        self.panel_izq.grid_rowconfigure(11, weight=1) # Spacer
 
         self.lbl_titulo = ctk.CTkLabel(self.panel_izq, text="VAR PRO", font=ctk.CTkFont(size=24, weight="bold"))
         self.lbl_titulo.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -158,15 +158,36 @@ class VarProApp(ctk.CTk):
         self.switch_lineas.select()
         self.switch_lineas.grid(row=7, column=0, padx=20, pady=5, sticky="w")
 
+        # Equipos
+        self.lbl_equipos = ctk.CTkLabel(self.panel_izq, text="Marcador Equipos:", font=ctk.CTkFont(size=12, weight="bold"))
+        self.lbl_equipos.grid(row=8, column=0, padx=20, pady=(15, 0), sticky="w")
+        
+        self.frame_equipos = ctk.CTkFrame(self.panel_izq, fg_color="transparent")
+        self.frame_equipos.grid(row=9, column=0, padx=20, pady=5, sticky="ew")
+        self.frame_equipos.grid_columnconfigure(0, weight=1)
+        self.frame_equipos.grid_columnconfigure(1, weight=1)
+        self.entry_equipo1 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Local", width=110)
+        self.entry_equipo1.grid(row=0, column=0, padx=(0, 5))
+        self.entry_equipo2 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Visit.", width=110)
+        self.entry_equipo2.grid(row=0, column=1, padx=(5, 0))
+        
+        self.entry_equipo1.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo2.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo1.bind("<Return>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo2.bind("<Return>", lambda e: self.actualizar_dibujos())
+
         # Lupa Panel Dedicated
         self.lbl_lupa_title = ctk.CTkLabel(self.panel_izq, text="Lupa de Precisión", font=ctk.CTkFont(size=14, weight="bold"))
-        self.lbl_lupa_title.grid(row=8, column=0, padx=20, pady=(30, 0))
+        self.lbl_lupa_title.grid(row=10, column=0, padx=20, pady=(15, 0))
         
         self.canvas_lupa = ctk.CTkCanvas(self.panel_izq, width=240, height=240, bg="black", highlightthickness=0)
-        self.canvas_lupa.grid(row=9, column=0, padx=20, pady=5, sticky="n")
+        self.canvas_lupa.grid(row=11, column=0, padx=20, pady=5, sticky="n")
 
-        self.btn_guardar = ctk.CTkButton(self.panel_izq, text="Exportar Análisis", command=self.guardar_imagen, fg_color="green", hover_color="darkgreen")
-        self.btn_guardar.grid(row=10, column=0, padx=20, pady=20)
+        self.btn_guardar = ctk.CTkButton(self.panel_izq, text="Exportar Imagen (JPG)", command=self.guardar_imagen, fg_color="green", hover_color="darkgreen")
+        self.btn_guardar.grid(row=12, column=0, padx=20, pady=(20, 10))
+        
+        self.btn_video = ctk.CTkButton(self.panel_izq, text="Exportar Vídeo (MP4)", command=self.guardar_video, fg_color="#C2185B", hover_color="#880E4F")
+        self.btn_video.grid(row=13, column=0, padx=20, pady=(0, 20))
 
         # Panel Central (Imagen)
         self.panel_central = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -201,6 +222,18 @@ class VarProApp(ctk.CTk):
         self.bind("<space>", lambda e: self.avanzar_fase())
         self.bind("z", lambda e: self.deshacer())
         self.bind("Z", lambda e: self.deshacer())
+        self.bind("<Left>", self.safe_prev_frame)
+        self.bind("<Right>", self.safe_next_frame)
+
+    def safe_prev_frame(self, event):
+        w = self.focus_get()
+        if w and "entry" in str(type(w)).lower(): return
+        self.prev_frame()
+
+    def safe_next_frame(self, event):
+        w = self.focus_get()
+        if w and "entry" in str(type(w)).lower(): return
+        self.next_frame()
 
     def cargar_imagen(self):
         path = filedialog.askopenfilename(filetypes=[("Media", "*.jpg;*.jpeg;*.png;*.bmp;*.webp;*.mp4;*.avi;*.mkv;*.mov")])
@@ -382,7 +415,7 @@ class VarProApp(ctk.CTk):
                     
                 if p_proyectado == mejor_def_proyectado:
                     if self.fase >= 3:
-                        self.imagen_base_dibujada = sombrear_zona_fuera_juego(self.imagen_base_dibujada, self.punto_fuga, p_proyectado, self.ataca_derecha, LALIGA_SEC, self.pts_lim)
+                        self.imagen_base_dibujada = sombrear_zona_fuera_juego(self.imagen_base_dibujada, self.punto_fuga, p_proyectado, self.ataca_derecha, (255, 255, 0), self.pts_lim)
                     self.imagen_base_dibujada = dibujar_linea_infinita(self.imagen_base_dibujada, self.punto_fuga, p_proyectado, LALIGA_AZUL, 2)
                 elif self.mostrar_lineas_fuga:
                     self.imagen_base_dibujada = dibujar_linea_infinita(self.imagen_base_dibujada, self.punto_fuga, p_proyectado, LALIGA_SEC, 1)
@@ -459,13 +492,96 @@ class VarProApp(ctk.CTk):
             if len(self.pts_def) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_def[-1], 2, LALIGA_AZUL, -1)
             if len(self.pts_att) % 2 != 0: cv2.circle(self.imagen_base_dibujada, self.pts_att[-1], 2, LALIGA_ROJO, -1)
         
-        texto_marca = "VAR PRO by @albertitocalata"
-        (text_w, text_h), _ = cv2.getTextSize(texto_marca, cv2.FONT_HERSHEY_DUPLEX, 1.0, 1)
-        x_marca = w_img - text_w - 30
-        y_marca = text_h + 30
-        cv2.putText(self.imagen_base_dibujada, texto_marca, (x_marca, y_marca), cv2.FONT_HERSHEY_DUPLEX, 1.0, LALIGA_NEGRO, 4, cv2.LINE_AA)
-        cv2.putText(self.imagen_base_dibujada, texto_marca, (x_marca, y_marca), cv2.FONT_HERSHEY_DUPLEX, 1.0, LALIGA_BLANCO, 1, cv2.LINE_AA)
+        eq1 = self.entry_equipo1.get().strip().upper()
+        eq2 = self.entry_equipo2.get().strip().upper()
         
+        if eq1 or eq2:
+            if not eq1: eq1 = "LOCAL"
+            if not eq2: eq2 = "VISIT."
+            
+            font = cv2.FONT_HERSHEY_DUPLEX
+            scale = 0.35
+            thick = 1
+            
+            (tw_1, th_1), _ = cv2.getTextSize(eq1, font, scale, thick)
+            (tw_v, th_v), _ = cv2.getTextSize("VS", font, scale, thick)
+            (tw_2, th_2), _ = cv2.getTextSize(eq2, font, scale, thick)
+            
+            pad_x = 8
+            pad_y = 6
+            
+            def find_shield(eq_name):
+                base = os.path.join("escudos", eq_name.lower())
+                for ext in [".png", ".webp", ".jpg", ".jpeg"]:
+                    if os.path.exists(base + ext): return base + ext
+                return None
+            
+            shield1_path = find_shield(eq1)
+            shield2_path = find_shield(eq2)
+            has_s1 = shield1_path is not None
+            has_s2 = shield2_path is not None
+            
+            s_size = 14
+            s_pad = 5
+            w_s1 = (s_size + s_pad) if has_s1 else 0
+            w_s2 = (s_size + s_pad) if has_s2 else 0
+
+            box_w_1 = tw_1 + pad_x * 2 + w_s1
+            box_w_v = tw_v + pad_x * 2
+            box_w_2 = tw_2 + pad_x * 2 + w_s2
+            h_box = max(th_1, th_v, th_2) + pad_y * 2
+            
+            x_start = 30
+            y_start = 30
+            y_end = y_start + h_box
+            
+            # Dibujar fondo cajas principales (Gris muy oscuro y Rojo LaLiga en medio)
+            cv2.rectangle(self.imagen_base_dibujada, (x_start, y_start), (x_start + box_w_1, y_end), (35, 35, 35), -1)
+            x_m = x_start + box_w_1
+            cv2.rectangle(self.imagen_base_dibujada, (x_m, y_start), (x_m + box_w_v, y_end), LALIGA_ROJO, -1)
+            x_m2 = x_m + box_w_v
+            cv2.rectangle(self.imagen_base_dibujada, (x_m2, y_start), (x_m2 + box_w_2, y_end), (35, 35, 35), -1)
+            
+            # Franja inferior decorativa
+            line_h = 3
+            cv2.rectangle(self.imagen_base_dibujada, (x_start, y_end), (x_start + box_w_1, y_end + line_h), (200, 200, 200), -1)
+            cv2.rectangle(self.imagen_base_dibujada, (x_m, y_end), (x_m + box_w_v, y_end + line_h), (10, 10, 10), -1)
+            cv2.rectangle(self.imagen_base_dibujada, (x_m2, y_end), (x_m2 + box_w_2, y_end + line_h), (200, 200, 200), -1)
+            
+            def overlay_shield(img, path, sx, sy, size):
+                shield = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+                if shield is not None:
+                    shield = cv2.resize(shield, (size, size), interpolation=cv2.INTER_LANCZOS4)
+                    if len(shield.shape) == 3 and shield.shape[2] == 4:
+                        alpha_s = shield[:, :, 3] / 255.0
+                        alpha_l = 1.0 - alpha_s
+                        try:
+                            for c in range(3):
+                                img[sy:sy+size, sx:sx+size, c] = (alpha_s * shield[:, :, c] + alpha_l * img[sy:sy+size, sx:sx+size, c])
+                        except Exception: pass
+                    else:
+                        shield_bgr = shield[:,:,:3] if len(shield.shape)==3 and shield.shape[2]>=3 else shield
+                        try: img[sy:sy+size, sx:sx+size] = shield_bgr
+                        except: pass
+
+            if has_s1:
+                sy = y_start + (h_box - s_size) // 2
+                overlay_shield(self.imagen_base_dibujada, shield1_path, x_start + pad_x, sy, s_size)
+            if has_s2:
+                sy = y_start + (h_box - s_size) // 2
+                overlay_shield(self.imagen_base_dibujada, shield2_path, x_m2 + pad_x, sy, s_size)
+
+            # Textos
+            th_max = max(th_1, th_v, th_2)
+            ty = y_start + (h_box + th_max) // 2 - 2
+            
+            tx_1 = x_start + pad_x + w_s1 + (box_w_1 - pad_x*2 - w_s1 - tw_1)//2
+            cv2.putText(self.imagen_base_dibujada, eq1, (tx_1, ty), font, scale, LALIGA_BLANCO, thick, cv2.LINE_AA)
+            tx_v = x_m + (box_w_v - tw_v) // 2
+            cv2.putText(self.imagen_base_dibujada, "VS", (tx_v, ty), font, scale, LALIGA_BLANCO, thick, cv2.LINE_AA)
+            tx_2 = x_m2 + pad_x + w_s2 + (box_w_2 - pad_x*2 - w_s2 - tw_2)//2
+            cv2.putText(self.imagen_base_dibujada, eq2, (tx_2, ty), font, scale, LALIGA_BLANCO, thick, cv2.LINE_AA)
+            
         self.mostrar_imagen()
 
     def mostrar_imagen(self):
@@ -500,6 +616,97 @@ class VarProApp(ctk.CTk):
                 out_path = f"{base}_VAR_PRO_{count}.jpg"
             cv2.imwrite(out_path, self.imagen_base_dibujada)
             print(f"Exportado: {out_path}")
+
+    def guardar_video(self):
+        if self.imagen_base_dibujada is None or self.imagen_original is None: return
+        if not self.ruta_imagen: return
+        
+        base = os.path.splitext(os.path.basename(self.ruta_imagen))[0]
+        count = 1
+        out_path = f"{base}_VAR_ANIM_{count}.mp4"
+        while os.path.exists(out_path):
+            count += 1
+            out_path = f"{base}_VAR_ANIM_{count}.mp4"
+            
+        h, w = self.imagen_original.shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(out_path, fourcc, 30.0, (w, h))
+        
+        fps = 30
+        frame0 = self.imagen_original.copy()
+        
+        _, pf = calcular_homografia_y_fuga(self.pts_fuga[0:4], self.modo_calibracion)
+        y_eval = self.pts_def[1][1]
+        m_x, m_def, def_sh = None, None, None
+        for i in range(0, len(self.pts_def) - 1, 2):
+            p, xf = obtener_punto_mas_adelantado(self.pts_def[i], self.pts_def[i+1], pf, y_eval, self.ataca_derecha)
+            if m_x is None or (self.ataca_derecha and xf > m_x) or (not self.ataca_derecha and xf < m_x):
+                m_x, m_def, def_sh = xf, p, self.pts_def[i]
+                
+        att_lines = []
+        for i in range(0, len(self.pts_att) - 1, 2):
+            p, xf = obtener_punto_mas_adelantado(self.pts_att[i], self.pts_att[i+1], pf, y_eval, self.ataca_derecha)
+            adelantado = (xf > m_x) if self.ataca_derecha else (xf < m_x)
+            color = LALIGA_ROJO if adelantado else LALIGA_VERDE
+            att_lines.append((p, self.pts_att[i], color))
+
+        max_w = w * 1.5
+        def draw_growing_line(img, p_fuga, p_center, color, prog):
+            x1, y1 = p_fuga; x2, y2 = p_center
+            if x1 == x2:
+                yt, yb = int(y2 - max_w * prog), int(y2 + max_w * prog)
+                cv2.line(img, (x1, yt), (x1, yb), color, 2, cv2.LINE_AA)
+            else:
+                m = (y2 - y1) / (x2 - x1 + 0.0001)
+                b = y1 - m * x1
+                xl, xr = int(x2 - max_w * prog), int(x2 + max_w * prog)
+                yl, yr = int(m * xl + b), int(m * xr + b)
+                cv2.line(img, p_center, (xl, yl), color, 2, cv2.LINE_AA)
+                cv2.line(img, p_center, (xr, yr), color, 2, cv2.LINE_AA)
+
+        frames_clean = int(fps * 1.5)
+        frames_def = int(fps * 2.0)
+        frames_att = int(fps * 2.0)
+        frames_shadow = int(fps * 2.0)
+        frames_end = int(fps * 4.0)
+
+        for _ in range(frames_clean): out.write(frame0)
+        
+        frame1 = frame0.copy()
+        if m_def is not None: cv2.line(frame1, def_sh, m_def, LALIGA_AZUL, 1, cv2.LINE_AA)
+        
+        for i in range(frames_def):
+            f_anim = frame1.copy()
+            if m_def is not None: draw_growing_line(f_anim, pf, m_def, LALIGA_AZUL, (i+1)/frames_def)
+            out.write(f_anim)
+            
+        if m_def is not None: frame1 = dibujar_linea_infinita(frame1, pf, m_def, LALIGA_AZUL, 2)
+        
+        for att_p, att_sh, att_col in att_lines:
+            cv2.line(frame1, att_sh, att_p, att_col, 1, cv2.LINE_AA)
+            
+        for i in range(frames_att):
+            f_anim = frame1.copy()
+            for att_p, att_sh, att_col in att_lines: draw_growing_line(f_anim, pf, att_p, att_col, (i+1)/frames_att)
+            out.write(f_anim)
+            
+        frame2 = frame1.copy()
+        for att_p, _, att_col in att_lines:
+            frame2 = dibujar_linea_infinita(frame2, pf, att_p, att_col, 2)
+            
+        frame3_fully_shaded = frame2.copy()
+        if m_def is not None and len(self.pts_att) >= 2:
+            frame3_fully_shaded = sombrear_zona_fuera_juego(frame3_fully_shaded, pf, m_def, self.ataca_derecha, (255, 255, 0), self.pts_lim)
+            
+        for i in range(frames_shadow):
+            prog = (i + 1) / frames_shadow
+            f_anim = cv2.addWeighted(frame3_fully_shaded, prog, frame2, 1.0 - prog, 0)
+            out.write(f_anim)
+            
+        for _ in range(frames_end): out.write(self.imagen_base_dibujada)
+            
+        out.release()
+        print(f"Vídeo Exportado: {out_path}")
 
 if __name__ == "__main__":
     app = VarProApp()
