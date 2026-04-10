@@ -4,6 +4,7 @@ import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 import os
+import json
 
 # --- COLORES LALIGA (Formato BGR para OpenCV) ---
 LALIGA_ROJO    = (68, 75, 255)
@@ -120,101 +121,129 @@ class VarProApp(ctk.CTk):
         self.mouse_x, self.mouse_y = 0, 0
         self.ruta_imagen = ""
 
-        # UI Layout
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Panel Izquierdo (Controles)
-        self.panel_izq = ctk.CTkFrame(self, width=300, corner_radius=0)
+        # ━━━ SIDEBAR PREMIUM ━━━
+        self.panel_izq = ctk.CTkFrame(self, width=330, corner_radius=0, fg_color="#0d0d11")
         self.panel_izq.grid(row=0, column=0, sticky="nsew")
-        self.panel_izq.grid_rowconfigure(11, weight=1) # Spacer
+        self.panel_izq.grid_propagate(False)
 
-        self.lbl_titulo = ctk.CTkLabel(self.panel_izq, text="VAR PRO", font=ctk.CTkFont(size=24, weight="bold"))
-        self.lbl_titulo.grid(row=0, column=0, padx=20, pady=(20, 10))
+        # ── Header con branding ──
+        self.frame_header = ctk.CTkFrame(self.panel_izq, fg_color="#14141a", corner_radius=0, height=80)
+        self.frame_header.pack(fill="x")
+        self.frame_header.pack_propagate(False)
+        ctk.CTkLabel(self.frame_header, text="🏟️  VAR PRO", font=ctk.CTkFont(family="Segoe UI", size=24, weight="bold"), text_color="#ffffff").pack(pady=(18, 0))
+        ctk.CTkLabel(self.frame_header, text="Offside Analysis — Homography Mode", font=ctk.CTkFont(size=11), text_color="#6b7280").pack(pady=(0, 8))
+        ctk.CTkFrame(self.panel_izq, fg_color="#3b82f6", height=2, corner_radius=0).pack(fill="x")
 
-        self.btn_cargar = ctk.CTkButton(self.panel_izq, text="Cargar Imagen", command=self.cargar_imagen)
-        self.btn_cargar.grid(row=1, column=0, padx=20, pady=10)
+        # ── Scrollable content ──
+        self.scroll_sidebar = ctk.CTkScrollableFrame(self.panel_izq, fg_color="#0d0d11", scrollbar_button_color="#27272a", scrollbar_button_hover_color="#3f3f46")
+        self.scroll_sidebar.pack(fill="both", expand=True, padx=0, pady=0)
 
-        # Estado Principal
-        self.lbl_fase = ctk.CTkLabel(self.panel_izq, text="Fase 1: Calibración", font=ctk.CTkFont(size=16), text_color="#FF4B44")
-        self.lbl_fase.grid(row=2, column=0, padx=20, pady=10)
+        # 📁 Archivo
+        self._section_label(self.scroll_sidebar, "📁  ARCHIVO")
+        self.frame_file = ctk.CTkFrame(self.scroll_sidebar, fg_color="#16161c", corner_radius=12, border_width=1, border_color="#27272a")
+        self.frame_file.pack(pady=(0, 8), padx=14, fill="x")
+        ctk.CTkButton(self.frame_file, text="Cargar Imagen / Vídeo", command=self.cargar_imagen, fg_color="#3f3f46", hover_color="#52525b", font=ctk.CTkFont(size=13, weight="bold"), height=38, corner_radius=10).pack(pady=12, padx=12, fill="x")
 
-        self.btn_siguiente = ctk.CTkButton(self.panel_izq, text="Siguiente Fase (Espacio)", command=self.avanzar_fase)
-        self.btn_siguiente.grid(row=3, column=0, padx=20, pady=5)
+        # 🎯 Estado
+        self._section_label(self.scroll_sidebar, "🎯  ESTADO")
+        self.frame_progreso = ctk.CTkFrame(self.scroll_sidebar, fg_color="#16161c", corner_radius=12, border_width=1, border_color="#27272a")
+        self.frame_progreso.pack(pady=(0, 8), padx=14, fill="x")
+        ctk.CTkLabel(self.frame_progreso, text="Fase Actual", font=ctk.CTkFont(size=11), text_color="#6b7280").pack(pady=(10, 0))
+        self.lbl_fase = ctk.CTkLabel(self.frame_progreso, text="Fase 1: Calibración", font=ctk.CTkFont(size=14, weight="bold"), text_color="#34d399", wraplength=260)
+        self.lbl_fase.pack(pady=(2, 10), padx=10)
 
-        self.btn_deshacer = ctk.CTkButton(self.panel_izq, text="Deshacer Punto (Z)", command=self.deshacer, fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
-        self.btn_deshacer.grid(row=4, column=0, padx=20, pady=5)
+        # 🎮 Controles
+        self._section_label(self.scroll_sidebar, "🎮  CONTROLES")
+        self.frame_btn = ctk.CTkFrame(self.scroll_sidebar, fg_color="transparent")
+        self.frame_btn.pack(pady=(0, 8), padx=14, fill="x")
+        self.btn_deshacer = ctk.CTkButton(self.frame_btn, text="⟲ Deshacer", command=self.deshacer, fg_color="#dc2626", hover_color="#b91c1c", width=140, height=36, font=ctk.CTkFont(size=13, weight="bold"), corner_radius=10)
+        self.btn_deshacer.pack(side="left")
+        self.btn_siguiente = ctk.CTkButton(self.frame_btn, text="Siguiente ▸", command=self.avanzar_fase, fg_color="#2563eb", hover_color="#1d4ed8", width=140, height=36, font=ctk.CTkFont(size=13, weight="bold"), corner_radius=10)
+        self.btn_siguiente.pack(side="right")
 
-        # Switches
-        self.switch_ataque = ctk.CTkSwitch(self.panel_izq, text="Ataca Derecha", command=self.toggle_ataque)
+        # ⚙️ Opciones
+        self._section_label(self.scroll_sidebar, "⚙️  OPCIONES")
+        self.frame_opt = ctk.CTkFrame(self.scroll_sidebar, fg_color="#16161c", corner_radius=12, border_width=1, border_color="#27272a")
+        self.frame_opt.pack(pady=(0, 8), padx=14, fill="x")
+        
+        self.switch_ataque = ctk.CTkSwitch(self.frame_opt, text="Ataca Derecha", command=self.toggle_ataque, progress_color="#3b82f6", button_color="#60a5fa", button_hover_color="#93c5fd")
         self.switch_ataque.select()
-        self.switch_ataque.grid(row=5, column=0, padx=20, pady=(20,5), sticky="w")
+        self.switch_ataque.pack(pady=(12, 6), padx=12, anchor="w")
 
-        self.switch_area = ctk.CTkSwitch(self.panel_izq, text="Área Grande", command=self.toggle_area)
+        self.switch_area = ctk.CTkSwitch(self.frame_opt, text="Área Grande", command=self.toggle_area, progress_color="#3b82f6", button_color="#60a5fa", button_hover_color="#93c5fd")
         self.switch_area.select()
-        self.switch_area.grid(row=6, column=0, padx=20, pady=5, sticky="w")
+        self.switch_area.pack(pady=6, padx=12, anchor="w")
 
-        self.switch_lineas = ctk.CTkSwitch(self.panel_izq, text="Mostrar Líneas Guía", command=self.toggle_lineas)
+        self.switch_lineas = ctk.CTkSwitch(self.frame_opt, text="Mostrar Líneas Guía", command=self.toggle_lineas, progress_color="#3b82f6", button_color="#60a5fa", button_hover_color="#93c5fd")
         self.switch_lineas.select()
-        self.switch_lineas.grid(row=7, column=0, padx=20, pady=5, sticky="w")
+        self.switch_lineas.pack(pady=(6, 12), padx=12, anchor="w")
 
-        # Equipos
-        self.lbl_equipos = ctk.CTkLabel(self.panel_izq, text="Marcador Equipos:", font=ctk.CTkFont(size=12, weight="bold"))
-        self.lbl_equipos.grid(row=8, column=0, padx=20, pady=(15, 0), sticky="w")
+        # ⚽ Equipos
+        self._section_label(self.scroll_sidebar, "⚽  EQUIPOS")
+        self.frame_equipos_card = ctk.CTkFrame(self.scroll_sidebar, fg_color="#16161c", corner_radius=12, border_width=1, border_color="#27272a")
+        self.frame_equipos_card.pack(pady=(0, 8), padx=14, fill="x")
         
-        self.frame_equipos = ctk.CTkFrame(self.panel_izq, fg_color="transparent")
-        self.frame_equipos.grid(row=9, column=0, padx=20, pady=5, sticky="ew")
-        self.frame_equipos.grid_columnconfigure(0, weight=1)
-        self.frame_equipos.grid_columnconfigure(1, weight=1)
-        self.entry_equipo1 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Local", width=110)
-        self.entry_equipo1.grid(row=0, column=0, padx=(0, 5))
-        self.entry_equipo2 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Visit.", width=110)
-        self.entry_equipo2.grid(row=0, column=1, padx=(5, 0))
+        self.frame_equipos = ctk.CTkFrame(self.frame_equipos_card, fg_color="transparent")
+        self.frame_equipos.pack(pady=10, padx=12, fill="x")
         
-        self.entry_equipo1.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
-        self.entry_equipo2.bind("<FocusOut>", lambda e: self.actualizar_dibujos())
-        self.entry_equipo1.bind("<Return>", lambda e: self.actualizar_dibujos())
-        self.entry_equipo2.bind("<Return>", lambda e: self.actualizar_dibujos())
+        self.entry_equipo1 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Local", width=120, fg_color="#27272a", border_color="#3f3f46", corner_radius=8)
+        self.entry_equipo1.pack(side="left", expand=True, padx=(0, 5))
+        self.entry_equipo2 = ctk.CTkEntry(self.frame_equipos, placeholder_text="Visit.", width=120, fg_color="#27272a", border_color="#3f3f46", corner_radius=8)
+        self.entry_equipo2.pack(side="left", expand=True, padx=(5, 0))
 
-        # Lupa Panel Dedicated
-        self.lbl_lupa_title = ctk.CTkLabel(self.panel_izq, text="Lupa de Precisión", font=ctk.CTkFont(size=14, weight="bold"))
-        self.lbl_lupa_title.grid(row=10, column=0, padx=20, pady=(15, 0))
-        
-        self.canvas_lupa = ctk.CTkCanvas(self.panel_izq, width=240, height=240, bg="black", highlightthickness=0)
-        self.canvas_lupa.grid(row=11, column=0, padx=20, pady=5, sticky="n")
+        # 🔍 Lupa
+        self._section_label(self.scroll_sidebar, "🔍  LUPA ×8")
+        self.frame_lupa = ctk.CTkFrame(self.scroll_sidebar, fg_color="#16161c", corner_radius=12, border_width=1, border_color="#27272a")
+        self.frame_lupa.pack(pady=(0, 8), padx=14, fill="x")
+        self.canvas_lupa = ctk.CTkCanvas(self.frame_lupa, width=220, height=220, bg="#050507", highlightthickness=1, highlightbackground="#27272a")
+        self.canvas_lupa.pack(pady=12, padx=12)
 
-        self.btn_guardar = ctk.CTkButton(self.panel_izq, text="Exportar Imagen (JPG)", command=self.guardar_imagen, fg_color="green", hover_color="darkgreen")
-        self.btn_guardar.grid(row=12, column=0, padx=20, pady=(20, 10))
+        # ── Export Footer (fijo abajo) ──
+        self.frame_export = ctk.CTkFrame(self.panel_izq, fg_color="#14141a", corner_radius=0, border_width=0)
+        self.frame_export.pack(side="bottom", fill="x")
+        ctk.CTkFrame(self.panel_izq, fg_color="#27272a", height=1, corner_radius=0).pack(side="bottom", fill="x")
         
-        self.btn_video = ctk.CTkButton(self.panel_izq, text="Exportar Vídeo (MP4)", command=self.guardar_video, fg_color="#C2185B", hover_color="#880E4F")
-        self.btn_video.grid(row=13, column=0, padx=20, pady=(0, 20))
+        self.btn_guardar = ctk.CTkButton(self.frame_export, text="📸 Exportar Imagen", command=self.guardar_imagen, fg_color="#059669", hover_color="#047857", height=34, corner_radius=10, font=ctk.CTkFont(size=12, weight="bold"))
+        self.btn_guardar.pack(pady=(10, 3), padx=12, fill="x")
+        
+        self.btn_video = ctk.CTkButton(self.frame_export, text="🎬 Exportar Vídeo", command=self.guardar_video, fg_color="#e11d48", hover_color="#be123c", height=34, corner_radius=10, font=ctk.CTkFont(size=12, weight="bold"))
+        self.btn_video.pack(pady=3, padx=12, fill="x")
+        ctk.CTkButton(self.frame_export, text="💾 Guardar Proyecto", command=self.guardar_proyecto, fg_color="#4f46e5", hover_color="#4338ca", height=34, corner_radius=10, font=ctk.CTkFont(size=12, weight="bold")).pack(pady=3, padx=12, fill="x")
+        ctk.CTkButton(self.frame_export, text="📂 Cargar Proyecto", command=self.cargar_proyecto, fg_color="#7c3aed", hover_color="#6d28d9", height=34, corner_radius=10, font=ctk.CTkFont(size=12, weight="bold")).pack(pady=(3, 6), padx=12, fill="x")
 
-        # Panel Central (Imagen)
-        self.panel_central = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.lbl_info = ctk.CTkLabel(self.frame_export, text="", text_color="#6b7280", font=ctk.CTkFont(size=10))
+        self.lbl_info.pack(pady=(0, 2))
+        ctk.CTkLabel(self.frame_export, text="VAR TECH™ v2.0", font=ctk.CTkFont(size=9), text_color="#3f3f46").pack(pady=(0, 8))
+
+        # ━━━ PANEL CENTRAL ━━━
+        self.panel_central = ctk.CTkFrame(self, corner_radius=0, fg_color="#050507")
         self.panel_central.grid(row=0, column=1, sticky="nsew")
         self.panel_central.grid_rowconfigure(0, weight=1)
         self.panel_central.grid_columnconfigure(0, weight=1)
 
-        self.canvas_img = ctk.CTkCanvas(self.panel_central, bg="#1a1a1a", highlightthickness=0)
+        self.canvas_img = ctk.CTkCanvas(self.panel_central, bg="#050507", highlightthickness=0)
         self.canvas_img.grid(row=0, column=0, sticky="nsew")
         
         # Controles de Vídeo Nav
-        self.frame_video = ctk.CTkFrame(self.panel_central)
-        self.frame_video.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+        self.frame_video = ctk.CTkFrame(self.panel_central, fg_color="#14141a", corner_radius=10, border_width=1, border_color="#27272a")
+        self.frame_video.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
         
-        self.btn_prev = ctk.CTkButton(self.frame_video, text="< Ant. Frame", width=120, command=self.prev_frame)
+        self.btn_prev = ctk.CTkButton(self.frame_video, text="◂ Anterior", width=110, command=self.prev_frame, fg_color="#3f3f46", hover_color="#52525b", corner_radius=8, height=32)
         self.btn_prev.pack(side="left", padx=10, pady=10)
         
-        self.slider_video = ctk.CTkSlider(self.frame_video, command=self.slider_cambio_frame)
+        self.slider_video = ctk.CTkSlider(self.frame_video, command=self.slider_cambio_frame, button_color="#3b82f6", button_hover_color="#60a5fa", progress_color="#3b82f6")
         self.slider_video.pack(side="left", fill="x", expand=True, padx=10, pady=10)
         
-        self.btn_next = ctk.CTkButton(self.frame_video, text="Sig. Frame >", width=120, command=self.next_frame)
+        self.btn_next = ctk.CTkButton(self.frame_video, text="Siguiente ▸", width=110, command=self.next_frame, fg_color="#3f3f46", hover_color="#52525b", corner_radius=8, height=32)
         self.btn_next.pack(side="left", padx=10, pady=10)
         
-        self.lbl_frame_info = ctk.CTkLabel(self.frame_video, text="Frame: 0 / 0")
+        self.lbl_frame_info = ctk.CTkLabel(self.frame_video, text="Frame: 0 / 0", text_color="#6b7280", font=ctk.CTkFont(size=12, weight="bold"))
         self.lbl_frame_info.pack(side="right", padx=20, pady=10)
         
-        self.frame_video.grid_remove() # Oculto al inicio
+        self.frame_video.grid_remove()
         
         self.canvas_img.bind("<Button-1>", self.click_imagen)
         self.canvas_img.bind("<Motion>", self.mover_raton)
@@ -224,6 +253,12 @@ class VarProApp(ctk.CTk):
         self.bind("Z", lambda e: self.deshacer())
         self.bind("<Left>", self.safe_prev_frame)
         self.bind("<Right>", self.safe_next_frame)
+        self.bind("<Control-s>", lambda e: self.guardar_proyecto())
+        self.bind("<Control-o>", lambda e: self.cargar_proyecto())
+
+    def _section_label(self, parent, text):
+        ctk.CTkLabel(parent, text=text, font=ctk.CTkFont(size=10, weight="bold"), text_color="#4b5563", anchor="w").pack(pady=(12, 4), padx=16, fill="x")
+
 
     def safe_prev_frame(self, event):
         w = self.focus_get()
@@ -615,6 +650,7 @@ class VarProApp(ctk.CTk):
                 count += 1
                 out_path = f"{base}_VAR_PRO_{count}.jpg"
             cv2.imwrite(out_path, self.imagen_base_dibujada)
+            self.lbl_info.configure(text=f"Exportado: {os.path.basename(out_path)}")
             print(f"Exportado: {out_path}")
 
     def guardar_video(self):
@@ -706,7 +742,71 @@ class VarProApp(ctk.CTk):
         for _ in range(frames_end): out.write(self.imagen_base_dibujada)
             
         out.release()
+        self.lbl_info.configure(text=f"Vídeo: {os.path.basename(out_path)}")
         print(f"Vídeo Exportado: {out_path}")
+
+    def guardar_proyecto(self):
+        if self.imagen_original is None or not self.ruta_imagen:
+            self.lbl_info.configure(text="Nada que guardar"); return
+        proj = {
+            "ruta_img": self.ruta_imagen,
+            "pts_fuga": [list(p) for p in self.pts_fuga],
+            "pts_def": [list(p) for p in self.pts_def],
+            "pts_att": [list(p) for p in self.pts_att],
+            "pts_lim": [list(p) for p in self.pts_lim],
+            "fase": self.fase,
+            "ataca_derecha": self.ataca_derecha,
+            "modo_calibracion": self.modo_calibracion,
+            "equipo1": self.entry_equipo1.get(),
+            "equipo2": self.entry_equipo2.get(),
+        }
+        path = filedialog.asksaveasfilename(defaultextension=".varproj",
+                                            filetypes=[("VAR Proyecto", "*.varproj")],
+                                            title="Guardar Proyecto")
+        if not path: return
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(proj, f, indent=2)
+        self.lbl_info.configure(text=f"Proyecto: {os.path.basename(path)}")
+
+    def cargar_proyecto(self):
+        path = filedialog.askopenfilename(filetypes=[("VAR Proyecto", "*.varproj"), ("Todos", "*.*")],
+                                          title="Cargar Proyecto")
+        if not path: return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                proj = json.load(f)
+        except Exception as e:
+            self.lbl_info.configure(text=f"Error: {e}"); return
+        
+        ruta = proj.get("ruta_img", "")
+        if not os.path.exists(ruta):
+            self.lbl_info.configure(text=f"Imagen no encontrada"); return
+        
+        self.ruta_imagen = ruta
+        self.imagen_original = cv2.imread(ruta)
+        if self.imagen_original is None:
+            self.lbl_info.configure(text="Error al leer imagen"); return
+        
+        self.pts_fuga = [tuple(p) for p in proj.get("pts_fuga", [])]
+        self.pts_def = [tuple(p) for p in proj.get("pts_def", [])]
+        self.pts_att = [tuple(p) for p in proj.get("pts_att", [])]
+        self.pts_lim = [tuple(p) for p in proj.get("pts_lim", [])]
+        self.fase = proj.get("fase", 0)
+        self.ataca_derecha = proj.get("ataca_derecha", True)
+        self.modo_calibracion = proj.get("modo_calibracion", "GRANDE")
+        
+        if self.ataca_derecha: self.switch_ataque.select()
+        else: self.switch_ataque.deselect()
+        if self.modo_calibracion == "GRANDE": self.switch_area.select()
+        else: self.switch_area.deselect()
+        
+        eq1 = proj.get("equipo1", "")
+        eq2 = proj.get("equipo2", "")
+        self.entry_equipo1.delete(0, "end"); self.entry_equipo1.insert(0, eq1)
+        self.entry_equipo2.delete(0, "end"); self.entry_equipo2.insert(0, eq2)
+        
+        self.actualizar_dibujos()
+        self.lbl_info.configure(text=f"Proyecto cargado: {os.path.basename(path)}")
 
 if __name__ == "__main__":
     app = VarProApp()
